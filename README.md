@@ -1,8 +1,18 @@
 # kazexi
-throw issues on me, i can catch 
 
-"a repository for issues"
+a repository for issues
+
+"throw issues on me, i can catch"
+
+Tested on: 
+iph SE 11.3.1 <br/>
+iph 7  11.3.1 <br/>
+iph 6  11.3.1 (my own device)<br/>
+iph x  11.3.1 (failed)<br/>
 
 ### Known issues
 * doesnt work on iph x
-* works funny with littlex
+* works funny with littlex, see [video](https://imgur.com/gallery/jNBa2lU)
+
+### Todo
+1. toggle in preference for double click to show kaze
