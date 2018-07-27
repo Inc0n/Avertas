@@ -8,6 +8,7 @@ Tested on: <br/>
 iph SE 11.3.1 <br/>
 iph 7  11.3.1 <br/>
 iph 6  11.3.1 (my own device)<br/>
+iph 5c 11.1.1 <br/>
 iph x  11.3.1 (failed)<br/>
 
 ### Known issues
