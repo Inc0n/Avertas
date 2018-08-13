@@ -13,7 +13,7 @@ iph x  11.3.1 (failed)<br/>
 
 ### Known issues
 * doesnt work on iph x
-* works funny with littlex, see [video](https://imgur.com/gallery/jNBa2lU)
+* ~works funny with littlex, see [video](https://imgur.com/gallery/jNBa2lU)~
 
 ### Todo
 1. toggle in preference for double click to show kaze
