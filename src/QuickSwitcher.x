@@ -5,18 +5,12 @@
 #import "KazeQuickSwitcherHighlightView.h"
 #import "KazeQuickSwitcherHighlightViewLayoutAttributes.h"
 
-@interface KazeQuickSwitcherDeckViewController : SBDeckSwitcherViewController
-// @property(assign, nonatomic) CGFloat normalizedOffset;
-// - (void)setNormalizedOffset:(CGFloat)normalizedOffset animated:(BOOL)animated completion:(UIViewAnimationCompletionBlock)completion;
-@end
-
-
-static BOOL quickSwitching = NO;
-static BOOL stopWithEmptySwitcher;
+static BOOL isSwitcherEmpty;
 
 static NSArray *kAppLayouts;
+static CGFloat starty;
+static CGAffineTransform origTransform;
 static KazeQuickSwitcherIconListView *iconListView;
-
 
 
 static void setNormalizedOffset(CGFloat normalizedOffset) {
@@ -24,21 +18,20 @@ static void setNormalizedOffset(CGFloat normalizedOffset) {
     CGFloat fullWidth = scrollView.contentSize.width;
     CGFloat scrollWidth = scrollView.bounds.size.width;
     CGFloat normalizationFactor = fullWidth - scrollWidth;
-
-    CGFloat offset = fullWidth - normalizedOffset * normalizationFactor - scrollWidth;
+    CGFloat offset = fullWidth - scrollWidth - normalizedOffset * normalizationFactor;
     setContentOffset(CGPointMake(offset, 0));
 }
 
 static void loadAppLayout(SBMainSwitcherViewController *switcherViewController) {
     kAppLayouts = [switcherViewController valueForKey:@"_appLayouts"];
     if (kAppLayouts.count == 0) {
-        stopWithEmptySwitcher = YES;
+        isSwitcherEmpty = YES;
         return;
     }
     if (quickSwitching) {
-        [KazeContainerView() addSubview:iconListView];
+        [KazeDeckSwitchController().view addSubview:iconListView];
         
-        KazeBasicAnimate(^{
+        KazeAnimate(0.2f, ^{
             [iconListView show];
         }, nil);
     }
@@ -58,75 +51,69 @@ static void gestureBegan(void) {
         iconListView = [[KazeQuickSwitcherIconListView alloc] initWithFrame:kScreenFrame];        
     });
 
-    KazeBasicAnimate(^{
-        if (KazeHasFrontmostApplication()) {
-            [KazeSpringBoard() _simulateHomeButtonPress];
-        }
-    }, ^(BOOL finished) {
-        quickSwitching = YES;
-        KazePresentInteractiveSwitcherBegin(NULL, NULL);
-        loadAppLayout(KazeSwitcherController());
-    });
-    // KazePresentInteractiveSwitcherBegin();
-    // KazeDeckSwitchController().scrollView.scrollEnabled = NO;
+    if (KazeHasFrontmostApplication()) { // this needs to execute early
+        [KazeSpringBoard() _simulateHomeButtonPress];
+    }
+    quickSwitching = YES;
+    isSwitcherEmpty = NO;
+    origTransform = KazeContainerView().transform;
+    KazePresentInteractiveSwitcherBegin();
+    loadAppLayout(KazeSwitcherController());
+    setNormalizedOffset(0); // fix cards showing too early
 }
 
 
 static void gestureChanged(CGPoint position) {
-    if (kAppLayouts.count == 0) {
-        return ;
+    if (isSwitcherEmpty) {
+        return ; // fix empty card in switcher crash
     }
 
     CGFloat viewHeight = KazeContainerView().bounds.size.height;
     CGFloat maxTouchHeight = viewHeight / 3;
     CGFloat touchHeight = viewHeight - position.y;
     CGFloat highlightHeight = KazeRubberbandValue(touchHeight, maxTouchHeight);
-    CGFloat step = highlightHeight / maxTouchHeight;
     CGPoint highlightPoint = CGPointMake(position.x, iconListView.bounds.size.height - highlightHeight);
+    CGFloat step = touchHeight / maxTouchHeight;
     [iconListView setHighlightPoint:highlightPoint];
     [iconListView setHintShowing:step > 1.0];
 
     if (![KazeSwitcherController() isVisible]) {
+        starty = position.y;
         return ;
     }
-
-    // NSUInteger highlightIndex = iconListView.highlightIndex;
-    // SBAppLayout *applayout = kAppLayouts[highlightIndex];
+    
+    CGAffineTransform transform = CGAffineTransformMakeTranslation(0, -highlightHeight);
+    step = 1.1 - highlightHeight / viewHeight;
+    transform = CGAffineTransformScale(transform, step, step);
+    KazeContainerView().transform = transform;
 
     setNormalizedOffset(iconListView.normalizedHighlightOffset);
 }
 
-static void gestureEnded(CGPoint velocity) {
+static void cleanUp(void) {
     quickSwitching = NO;
     [iconListView stopScrolling];
+    [iconListView hide];
+    [iconListView removeFromSuperview];
+    KazeContainerView().transform = origTransform;
+    [KazeSwitcherController() _rebuildAppListCache];
+    [KazeDeckSwitchController() _updateScrollViewSizeAndSpacing];
+}
 
-    KazeBasicAnimate(^{
-        [iconListView hide:NO];
-    }, nil);
-    if (kAppLayouts.count > 0) {
+static void gestureEnded(CGPoint velocity) {
+    cleanUp();
+    BOOL upward = [KazePreferencesValue(kAccessAppSwitcherKey()) boolValue] && velocity.y < -100;
+    if (!upward && !isSwitcherEmpty) {
         NSUInteger highlightIndex = iconListView.highlightIndex;
         [KazeDeckSwitchController() _updateScrollViewContentOffsetToFocusIndex:highlightIndex animated:NO completion:nil];
         SBAppLayout *applayout = kAppLayouts[highlightIndex];
         KazeSwitcherController()._returnToAppLayout = applayout;
+        KazeDismissInteractiveSwitcher();
     }
-    [KazeSwitcherController() _rebuildAppListCache];
-    [KazeDeckSwitchController() _updateScrollViewSizeAndSpacing];
-    [iconListView removeFromSuperview];
-    KazeDismissInteractiveSwitcher();
 }
 
 static void gestureCancelled(void) {
-    return ;
-
-    quickSwitching = NO;
-    [iconListView stopScrolling];
-    SBAppLayout *applayout = kAppLayouts[1];
-    if (applayout) {
-        [KazeSwitcherController() switcherContentController:KazeDeckSwitchController() bringAppLayoutToFront:applayout];
-    }
-    KazeSwitcherController()._returnToAppLayout = applayout;
-
-    KazeDismissInteractiveSwitcher();
+    cleanUp();
 }
 
 KazeGestureConditionBlock KazeQuickSwitcherCondition = ^BOOL(KazeGestureRegion region) {
@@ -141,31 +128,24 @@ KazeGestureHandlerBlock KazeQuickSwitcherHandler = ^void(UIGestureRecognizerStat
     // NSLog(@"KazeQuickSwitcherHandler UIGestureRecognizerStateBegan");
     switch (state) {
         case UIGestureRecognizerStateBegan:
-            KazeSBAnimate(^{
-                gestureBegan();
-            }, ^(BOOL finished){
-                setNormalizedOffset(0);
-            });
+            gestureBegan();
             gestureChanged(position); 
             break;
         case UIGestureRecognizerStateChanged:
             gestureChanged(position);
             break;
         case UIGestureRecognizerStateEnded:
-            NSLog(@"ended?? %ld", state);
             gestureEnded(velocity);
             break;
         default:
-            NSLog(@"failed?? cancel?? %ld", state);
-            break;
             gestureCancelled();
+            break;
     }
 };
 
 static CGFloat const cardMargin = 16;
 static CGFloat const minDepth = -0.4;
 // static CGFloat const minScale = 0.5;
-
 
 
 %hook SBDeckSwitcherPersonality
@@ -184,9 +164,7 @@ static CGFloat const minDepth = -0.4;
     if (quickSwitching)
         return 0;
     return %orig;
-
 }
-
 -(double)_depthForIndex:(unsigned long long)index displayItemsCount:(unsigned long long)count scrollProgress:(double)scrollProgress ignoreInsertionsAndRemovals:(BOOL)arg4 {
     double origdepth = %orig;
     if (!quickSwitching)
@@ -199,7 +177,6 @@ static CGFloat const minDepth = -0.4;
     return depth;
 }
 -(CGRect)_frameForIndex:(unsigned long long)index displayItemsCount:(unsigned long long)count stackedProgress:(double)stackedProgress scrollProgress:(double)scrollProgress ignoringScrollOffset:(BOOL)arg5 ignoreInsertionsAndRemovals:(BOOL)arg6 {
-    // return %orig;
     CGRect origframe = %orig;
     if (!quickSwitching)
         return origframe;
@@ -211,40 +188,15 @@ static CGFloat const minDepth = -0.4;
     CGRect frame = (CGRect){{x, 0}, size};
     return frame;
 }
--(double)scaleForIndex:(unsigned long long)arg1 mode:(long long)arg2 {
-    double scale = %orig;
-    if (quickSwitching) 
-        return scale;
-    if ([KazeSwitcherController() isVisible])
-        return 0.7;
-    return scale;
-}
 
--(double)_scrollProgressForIndex:(unsigned long long)index displayItemsCount:(unsigned long long)count depth:(double)arg3 ignoreInsertionsAndRemovals:(BOOL)arg4 {
-    if (quickSwitching)
-        return count > 1 ? ((CGFloat)index) / (count - 1) : 0.4;
-    return %orig;
-}
--(double)_scrollProgressForIndex:(unsigned long long)index {
-    if (quickSwitching)
-        return kAppLayouts.count > 1 ? ((CGFloat)index) / (kAppLayouts.count - 1) : 0.4;
-    return %orig;
-}
+// -(double)_scrollProgressForIndex:(unsigned long long)index displayItemsCount:(unsigned long long)count depth:(double)arg3 ignoreInsertionsAndRemovals:(BOOL)arg4 {
+//     if (quickSwitching)
+//         return count > 1 ? ((CGFloat)index) / (count - 1) : 0.4;
+//     return %orig;
+// }
+// -(double)_scrollProgressForIndex:(unsigned long long)index {
+//     if (quickSwitching)
+//         return kAppLayouts.count > 1 ? ((CGFloat)index) / (kAppLayouts.count - 1) : 0.4;
+//     return %orig;
+// }
 %end
-
-// CHOptimizedMethod(1, super, double, KazeQuickSwitcherDeckViewController, _scaleForPresentedProgress, CGFloat, presentedProgress) {
-//     return 1;
-// }
-
-// CHOptimizedMethod(2, super, CGFloat, KazeQuickSwitcherDeckViewController, _blurForIndex, NSUInteger, index, scrollProgress, double, progress) {
-//     return 0;
-// }
-
-// CHOptimizedMethod(4, super, double, KazeQuickSwitcherDeckViewController, _scrollProgressForIndex, NSUInteger, index, displayItemsCount, NSUInteger, count, depth, double, depth, ignoringKillOffset, BOOL, ignoringKillOffset) {
-//     return count > 1 ? ((CGFloat)index) / (count - 1) : 0;
-// }
-
-
-// @interface KazeQuickSwitcherIconListView () <UICollectionViewDataSource, UICollectionViewDelegate>
-// - (SBLeafIcon *)iconAtIndex:(NSUInteger)index;
-// @end

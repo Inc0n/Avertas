@@ -1,15 +1,25 @@
 #import "Headers.h"
 
-void KazePresentInteractiveSwitcherBegin(KazeCallback animtedAction, KazeCallback completion) {
-    [KazeSwitcherController() activateSwitcherNoninteractivelyWithSource:0];
+static BOOL switcherContinuityLock;
+static BOOL interceptAnimation;
+
+void setContentOffset(CGPoint offset) {
+    KazeAnimate(0.2f, ^{
+        [KazeDeckSwitchController().scrollView setContentOffset:offset animated:NO];
+    }, nil);
+}
+
+void KazePresentInteractiveSwitcherBegin() {
+    switcherContinuityLock = YES;
+    // interceptAnimation = YES;
+    [KazeSwitcherController() activateSwitcherNoninteractivelyWithSource:1];
+    interceptAnimation = NO;
+}
+
+void KazePresentInteractiveSwitcherEnd(void) {
+    switcherContinuityLock = NO;
 }
 
 void KazeDismissInteractiveSwitcher(void) {
     [KazeSwitcherController() dismissSwitcherNoninteractively];
-}
-
-void setContentOffset(CGPoint offset) {
-    KazeBasicAnimate(^{
-        [KazeDeckSwitchController().scrollView setContentOffset:offset animated:NO];
-    }, nil);
 }

@@ -38,6 +38,9 @@
         [self newSpecifierForIdentifier:kCardOpacityKey() name:KazeString(@"CARD_OPACITY") image:nil cell:PSSliderCell setupBlock:NULL updateBlock:NULL isShowingBlock:NULL isEnabledBlock:NULL],
 
         [self newGroupSpecifierForIdentifier:nil name:@"MORE" footer:@"" updateBlock:NULL],
+        [self newSpecifierForIdentifier:kAccessAppSwitcherKey() name:KazeString(@"ACCESS_APP_SWITCHER") image:nil cell:PSSwitchCell setupBlock:NULL updateBlock:NULL isShowingBlock:NULL isEnabledBlock:^BOOL(PSSpecifier *specifier) {
+            return [self.preferences boolForKey:kQuickSwitcherEnabledKey()];
+        }],
         [self newSpecifierForIdentifier:kDisableLockGestureKey() name:KazeString(@"DISABLE_LOCK_GESTURE") image:nil cell:PSSwitchCell setupBlock:NULL updateBlock:NULL isShowingBlock:NULL isEnabledBlock:^BOOL(PSSpecifier *specifier) {
             return [self.preferences boolForKey:kHotCornersEnabledKey()];
         }],
@@ -55,8 +58,6 @@
         [self newGroupSpecifierForIdentifier:nil name:@"LICENSE & COPYRIGHT" footer:KazeString(@"CREDIT") updateBlock:NULL],
         [self newSpecifierForIdentifier:nil name:KazeString(@"LEGAL") image:nil cell:PSLinkCell setupBlock:^(PSSpecifier *specifier) {
             specifier->detailControllerClass = NSClassFromString(@"PSLegalController");
-            // [specifier setProperty:@"Legal" forKey:@"label"]; 
-            // [specifier setProperty:[NSString stringWithFormat:@"/var/mobile/Library/Preferences/%@.plist", KazeIdentifier()] forKey:@"ALSettingsPath"]; 
         } updateBlock:NULL isShowingBlock:NULL isEnabledBlock:NULL],
     ];
 }

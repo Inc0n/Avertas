@@ -28,7 +28,10 @@
 #import "KazeQuickSwitcherIconListViewLayout.h"
 #import "KazeQuickSwitcherHighlightViewLayoutAttributes.h"
 
-typedef void (^UIViewAnimationActionsBlock)(void);
+static BOOL homeSwitching = NO;
+static BOOL quickSwitching = NO;
+
+typedef void (^ActionsBlock)(void);
 typedef void (^UIViewAnimationCompletionBlock)(BOOL finished);
 
 @interface UIWindow (Private)
@@ -36,7 +39,7 @@ typedef void (^UIViewAnimationCompletionBlock)(BOOL finished);
 @end
 
 @interface UIView (Private)
-+ (void)_setupAnimationWithDuration:(NSTimeInterval)duration delay:(NSTimeInterval)delay view:(UIView *)view options:(UIViewAnimationOptions)options factory:(id<_UIBasicAnimationFactory>)factory animations:(UIViewAnimationActionsBlock)animations start:(id)start animationStateGenerator:(id)generator completion:(UIViewAnimationCompletionBlock)completion;
++ (void)_setupAnimationWithDuration:(NSTimeInterval)duration delay:(NSTimeInterval)delay view:(UIView *)view options:(UIViewAnimationOptions)options factory:(id<_UIBasicAnimationFactory>)factory animations:(ActionsBlock)animations start:(id)start animationStateGenerator:(id)generator completion:(UIViewAnimationCompletionBlock)completion;
 @end
 
 @interface UIScrollView (Private)
@@ -368,11 +371,10 @@ extern BOOL KazeSwitcherAllowed(void);
 extern BOOL KazeHasFrontmostApplication(void);
 
 extern void KazeSwitcherLock(BOOL enabled);
-extern void KazeSBAnimate(UIViewAnimationActionsBlock actions, UIViewAnimationCompletionBlock completion);
-extern void KazeAnimate(NSTimeInterval duration, UIViewAnimationActionsBlock actions, UIViewAnimationCompletionBlock completion);
-extern void KazeBasicAnimate(UIViewAnimationActionsBlock actions, UIViewAnimationCompletionBlock completion);
-extern void KazeSpring(NSTimeInterval duration, CGFloat damping, CGFloat velocity, UIViewAnimationActionsBlock actions, UIViewAnimationCompletionBlock completion);
-extern void KazeTransit(UIView *view, NSTimeInterval duration, UIViewAnimationActionsBlock actions, UIViewAnimationCompletionBlock completion);
+extern void KazeSBAnimate(ActionsBlock actions, UIViewAnimationCompletionBlock completion);
+extern void KazeAnimate(NSTimeInterval duration, ActionsBlock actions, UIViewAnimationCompletionBlock completion);
+extern void KazeSpring(NSTimeInterval duration, CGFloat damping, CGFloat velocity, ActionsBlock actions, UIViewAnimationCompletionBlock completion);
+extern void KazeTransit(UIView *view, NSTimeInterval duration, ActionsBlock actions, UIViewAnimationCompletionBlock completion);
 extern CGFloat KazeRubberbandValue(CGFloat value, CGFloat max);
 extern id KazePreferencesValue(NSString *key);
 
@@ -387,8 +389,11 @@ typedef BOOL (^KazeGestureConditionBlock)(KazeGestureRegion region);
 typedef void (^KazeGestureHandlerBlock)(UIGestureRecognizerState state, CGPoint position, CGPoint velocity);
 
 extern void KazeRegisterGesture(KazeGestureConditionBlock condition, KazeGestureHandlerBlock handler);
-extern void KazePresentInteractiveSwitcherBegin(KazeCallback action, KazeCallback completion);
+extern void KazePresentInteractiveSwitcherBegin();
+extern void KazePresentInteractiveSwitcherEnd();
+extern void AvtsNoAnimation(ActionsBlock block);
 extern void KazeDismissInteractiveSwitcher(void);
+extern void KazeSwitcherSetTransitionOffset(CGFloat yOffset);
 extern void setContentOffset(CGPoint contentOffset);
 
 
@@ -399,12 +404,9 @@ extern KazeGestureHandlerBlock KazeLockScreenHandler;
 extern KazeGestureConditionBlock KazeHomeScreenCondition;
 extern KazeGestureHandlerBlock KazeHomeScreenHandler;
 
-CHInline static NSString *KazeIdentifier(void) { return @"com.kunderscore.kaze"; }
+CHInline static NSString *KazeIdentifier(void) { return @"com.kunderscore.avertas"; }
 CHInline static NSBundle *KazeBundle(void) { return [NSBundle bundleWithPath:@"/Library/PreferenceBundles/AvertasPreferences.bundle"]; }
 CHInline static UIImage *KazeImage(NSString *name) { return [UIImage imageNamed:name inBundle:KazeBundle()]; }
-
-#define kScreenFrame UIScreen.mainScreen.bounds
-
 
 #define KazePreferencesKey(name) CHInline static NSString *k ## name ## Key(void) { return @#name; }
 KazePreferencesKey(QuickSwitcherEnabled)

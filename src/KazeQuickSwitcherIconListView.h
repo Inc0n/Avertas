@@ -10,7 +10,7 @@
 - (void)stopScrolling;
 
 - (void)show;
-- (void)hide:(BOOL)animate;
+- (void)hide;
 @end
 
 @interface KazeQuickSwitcherIconListView () <UICollectionViewDataSource, UICollectionViewDelegate>

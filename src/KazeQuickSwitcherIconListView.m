@@ -51,19 +51,12 @@
     self.frame = CGRectMake(0, 0, size.width, size.height);
 }
 
-- (void)hide:(BOOL)animate { 
+- (void)hide { 
     void (^hideByFrame)() = ^() {
         CGSize size = KazeContainerView().bounds.size;
         self.frame = CGRectMake(0, size.height, size.width, size.height);
     };
-    if (animate) {
-        KazeBasicAnimate(^{
-            hideByFrame();
-        }, nil);
-    }
-    else {
-        hideByFrame();
-    }
+    KazeAnimate(0.2f, hideByFrame, nil);
 }
 
 - (void)layoutSubviews {

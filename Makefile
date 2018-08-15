@@ -4,7 +4,7 @@ DEBUG = 0
 TWEAK_NAME = $(PROJECT_NAME)
 BUNDLE_NAME = $(PROJECT_NAME)Preferences
 
-$(PROJECT_NAME)_FILES = $(wildcard src/*.m) $(wildcard src/*.x)
+$(PROJECT_NAME)_FILES = $(wildcard src/*.x) $(wildcard src/*.m) 
 $(PROJECT_NAME)_FRAMEWORKS = UIKit
 $(PROJECT_NAME)_CFLAGS = -fobjc-arc
 $(PROJECT_NAME)_PRIVATE_FRAMEWORKS = BaseBoardUI FrontBoard BackBoardServices

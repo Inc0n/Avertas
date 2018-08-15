@@ -1,0 +1,13 @@
+Package: com.kunderscore.avertas
+Name: Avertas
+Section: Tweaks
+Description: Quick Switcher and Hot Corners
+Depends: mobilesubstrate, preferenceloader, applist
+Priority: optional
+Architecture: iphoneos-arm
+Author: kunderscore <kunderscore3@gmail.com>
+Maintainer: kunderscore
+Icon: file:///Library/PreferenceBundles/AvertasPreferences.bundle/Avertas.png
+Tag: purpose::extension
+Version: 9-1
+Installed-Size: 228

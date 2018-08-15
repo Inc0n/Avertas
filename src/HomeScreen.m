@@ -1,39 +1,67 @@
 #import "Headers.h"
 
-static CGPoint oldContentOffset;
+// static CGPoint oldContentOffset;
+id context;
 
 // CHDeclareClass(SBReachabilityManager)
+void KazeSwitcherSetTransitionOffset(CGFloat yOffset) {
+    CGAffineTransform transform = CGAffineTransformMakeTranslation(0, yOffset);
+    KazeContainerView().transform = transform;
+}
 
 static void gestureBegan(void) {
-    SBAppSwitcherScrollView *scrollView = KazeDeckSwitchController().scrollView;
-    oldContentOffset = scrollView.contentOffset;
+    homeSwitching = YES;
+    SBAppLayout *applayout = [OfClass(SBAppLayout) homeScreenAppLayout];
+    KazeSwitcherController()._returnToAppLayout = applayout;
+    // context = [KazeSwitcherController().initialLayoutState transitionContextForActivatingAppLayout:applayout];
+    context = [KazeSwitcherController().initialLayoutState transitionContextForActivatingHomeScreen];
+    NSLog(@"gestureBegan %@", LOG(KazeSwitcherController().initialLayoutState));
+    // KazePresentInteractiveSwitcherBegin();
+    SBMainDisplaySceneLayoutViewController *sceneController = IvarOf(KazeSwitcherController(), _sceneLayoutViewController);
+    [KazeSwitcherController() sceneLayoutController:sceneController didBeginLayoutStateTransitionWithContext:context];
 
-    // SBMainWorkspaceTransitionRequest *request = [[OfClass(SBMainWorkspace) mainWorkspace] createRequestWithOptions:0];
-    // request.eventLabel = @"ActivateSpringBoard";
 }
 
 static void gestureChanged(CGPoint position) {
-    // CGFloat height = KazeSpringBoard().keyWindow.bounds.size.height;
-    // CGFloat step = MIN((height - position.y) / (height / 2), 1);
-    // float factor = MIN(MAX(1 - step, 0.01), 1.0);
-    // CGPointMake(oldContentOffset.x, oldContentOffset.y);
+    KazeSwitcherSetTransitionOffset(position.y - kScreenHeight);
     [KazeSpringBoard() _simulateHomeButtonPress];
 }
 
-static void gestureEnded(CGPoint velocity) {
-    NSLog(@"hello here");
+static void gestureEnded(CGPoint position, CGPoint velocity) {
+    CGFloat upward = velocity.y <= 0;
+    CGFloat height = KazeContainerView().bounds.size.height;
+    CGFloat distance = upward ? position.y : height - position.y;
+    CGFloat springVelocity = ABS(velocity.y) / distance;
+    CGFloat yOffset = upward ? -kScreenHeight : 0;
     
-    BOOL forward = velocity.y <= 0;
-    if (forward) {
-    } else {
-        // SBAppLayout *applayout = [OfClass(SBAppLayout) homeScreenAppLayout];
-        // KazeSwitcherController()._returnToAppLayout = applayout;
-    }
+    KazeSpring(0.4, 1.0, springVelocity, ^{
+        KazeSwitcherSetTransitionOffset(yOffset);
+    }, ^(BOOL finished) {
+        // KazeDismissInteractiveSwitcher();
+        KazeSwitcherSetTransitionOffset(0);
+    });
+    // KazePresentInteractiveSwitcherEnd();
+    homeSwitching = NO;
+    
 
+    // SBMainDisplaySceneLayoutViewController *sceneController = IvarOf(KazeSwitcherController(), _sceneLayoutViewController);
+    // [KazeDeckSwitchController() performTransitionWithContext:context animated:YES completion:nil];
+    // [KazeSwitcherController() sceneLayoutControllerDidEndLayoutStateTransition:KazeSwitcherController().initialLayoutState wasInterrupted:NO];
 }
 
 static void gestureCancelled(void) {
+    [KazeSpringBoard() _simulateHomeButtonPress];
+
+    // KazePresentInteractiveSwitcherEnd();
+    KazeSpring(0.4, 1.0, 1.0, ^{
+        KazeSwitcherSetTransitionOffset(kScreenHeight);
+        
+    }, ^(BOOL finished) {
+        KazeDismissInteractiveSwitcher();
+    });
+    homeSwitching = NO;
 }
+
 
 KazeGestureConditionBlock KazeHomeScreenCondition = ^BOOL(KazeGestureRegion region) {
     return [KazePreferencesValue(kHotCornersEnabledKey()) boolValue]
@@ -53,7 +81,7 @@ KazeGestureHandlerBlock KazeHomeScreenHandler = ^void(UIGestureRecognizerState s
             gestureChanged(position);
             break;
         case UIGestureRecognizerStateEnded:
-            gestureEnded(velocity);
+            gestureEnded(position, velocity);
             break;
         default:
             gestureCancelled();
