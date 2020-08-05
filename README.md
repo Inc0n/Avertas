@@ -12,8 +12,6 @@ Most obviously renamed to Avertas, its switch in Latin BTW. 😉
 * doesnt work on iph x
 * ~works funny with littlex, see [video](https://imgur.com/gallery/jNBa2lU)~
 
-"throw issues on me, i can catch"
-
 ### Device Compatibility
 Tested on: <br/>
 iph SE 11.3.1 <br/>
